@@ -1,7 +1,3 @@
-Claro! Aqui está a documentação unificada para o deployment e o processo de criação do cluster com K3d e Kubernetes para a aplicação Maiabank.
-
----
-
 # **API Maiabank**
 
 ### Configuração para Implantar um Deployment e um Service no Kubernetes
