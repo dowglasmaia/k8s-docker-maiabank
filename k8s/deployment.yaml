@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maiabank
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: maiabank
+  template:
+    metadata:
+      labels:
+        app: maiabank
+    spec:
+      containers:
+        - name: maiabankpix
+          image: dowglasmaia/maiabank:latest
+          ports:
+            - name: http
+              containerPort: 8089
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maiabank
+spec:
+  selector:
+    app: maiabank
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8089
+      protocol: TCP
+      nodePort: 30000
