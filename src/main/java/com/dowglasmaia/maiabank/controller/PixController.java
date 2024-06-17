@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class PixController {
 
     @PostMapping
-    public ResponseEntity<Void> receivers(){
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    public ResponseEntity<String> receivers(){
+        String response = "API-ON";
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

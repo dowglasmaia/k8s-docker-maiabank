@@ -232,9 +232,176 @@ Verifique a criação dos recursos:
   ```
 
 ---
-
 Seguindo esses passos, você cria um cluster Kubernetes com K3d e implanta a aplicação Maiabank, tornando-a acessível externamente.
 
-Se precisar de mais detalhes ou ajuda adicional, estou à disposição!
-
 ---
+
+## Explicada do Dockerfile:
+
+```dockerfile
+# Fase 1: Build
+FROM maven:3.8.4-openjdk-17-slim AS build
+
+# Define o diretório de trabalho inicial
+WORKDIR /maiabank
+
+# Copia o arquivo pom.xml e resolve as dependências
+COPY pom.xml /maiabank/
+RUN mvn dependency:resolve
+
+# Copia o código fonte e compila o projeto
+COPY src /maiabank/src
+RUN mvn clean install
+
+# Fase 2: Runtime
+FROM amazoncorretto:17-alpine3.16
+
+# Informações de manutenção
+LABEL MAINTAINER="Dowglas Maia"
+
+# Variáveis de ambiente para configuração
+ENV SPRING_LOGGING_LEVEL=INFO
+ENV ACTUATOR_PORT=8089
+ENV PORT=8089
+
+# Ajusta o fuso horário para São Paulo
+RUN rm -f /etc/localtime && ln -s /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime
+
+# Copia o arquivo JAR gerado na fase de build
+COPY --from=build /maiabank/target/*.jar /usr/src/app/maiabank-api.jar
+
+# Define o diretório de trabalho para a execução do aplicativo
+WORKDIR /usr/src/app
+
+# Comando para iniciar a aplicação
+ENTRYPOINT ["java", "-noverify", "-Dfile.encoding=UTF-8", "-Dlogging.level.root=${SPRING_LOGGING_LEVEL}", "-Dmanagement.server.port=${ACTUATOR_PORT}", "-jar", "/usr/src/app/maiabank-api.jar", "--server.port=${PORT}"]
+
+# Exposição das portas
+EXPOSE ${PORT} ${ACTUATOR_PORT}
+```
+
+### Passo a Passo do Dockerfile
+
+#### Fase 1: Build
+
+1. **Imagem Base:** Usa a imagem `maven:3.8.4-openjdk-17-slim` para compilar a aplicação.
+2. **Diretório de Trabalho:** Define `/maiabank` como o diretório de trabalho.
+3. **Copia e Resolve Dependências:** Copia `pom.xml` e resolve dependências do Maven.
+4. **Copia o Código Fonte:** Copia o diretório `src` contendo o código fonte.
+5. **Compila e Gera o Artefato:** Executa `mvn clean install` para compilar e gerar o JAR.
+
+#### Fase 2: Runtime
+
+1. **Imagem Base:** Usa `amazoncorretto:17-alpine3.16` para a execução da aplicação.
+2. **Informações de Manutenção:** Define o rótulo do mantenedor.
+3. **Configurações de Ambiente:** Define variáveis de ambiente para configuração da aplicação.
+4. **Ajusta Fuso Horário:** Configura o fuso horário para São Paulo.
+5. **Copia o JAR:** Copia o JAR gerado na fase de build para o diretório `/usr/src/app`.
+6. **Diretório de Trabalho:** Define `/usr/src/app` como diretório de trabalho.
+7. **Ponto de Entrada:** Define o comando `ENTRYPOINT` para executar a aplicação.
+8. **Exposição das Portas:** Expõe as portas configuradas.
+
+### Resumo
+
+Este Dockerfile compila a aplicação Java na fase de build e depois a executa em uma imagem leve de runtime baseada em Amazon Corretto. Ele utiliza variáveis de ambiente para configurar a aplicação e ajusta o fuso horário. As boas práticas aplicadas garantem uma imagem eficiente e flexível.
+
+--- 
+
+## Vamos detalhar e explicar o `docker-compose.yml`:
+
+```yaml
+version: "3.3"
+services:
+  maiabank-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    networks:
+      - maianet
+
+networks:
+  maianet:
+    driver: bridge
+```
+
+### Estrutura e Explicação
+
+#### 1. `version: "3.3"`
+
+- **Descrição:** Define a versão do formato de arquivo `docker-compose.yml` que está sendo usado.
+- **Significado:** O Compose usa diferentes versões de arquivo para aproveitar novos recursos. A versão 3.3 é compatível com recursos do Docker 1.13.0+ e Docker Compose 1.13.0+.
+
+#### 2. `services`
+
+- **Descrição:** Define uma lista de serviços que serão gerenciados pelo Compose.
+- **Significado:** Cada entrada em `services` representa um contêiner ou um conjunto de contêineres que compõem sua aplicação.
+
+##### `maiabank-api`
+
+- **Descrição:** Define o serviço `maiabank-api`.
+- **Significado:** Este é o nome do serviço que será criado e gerenciado pelo Docker Compose. Vamos explorar suas configurações:
+
+###### `build`
+
+- **Descrição:** Especifica como construir a imagem Docker para o serviço.
+- **Significado:** Define a origem e o contexto para a construção da imagem Docker.
+
+    - **`context: .`**
+        - **Descrição:** Define o contexto de build para o Docker, que é o diretório atual (`.`).
+        - **Significado:** O Docker usará o diretório atual como o contexto para construir a imagem, incluindo arquivos e diretórios a partir desse ponto.
+
+    - **`dockerfile: Dockerfile`**
+        - **Descrição:** Especifica o Dockerfile a ser usado para construir a imagem.
+        - **Significado:** Indica ao Docker Compose que o Dockerfile localizado no contexto (diretório atual) será usado para construir a imagem para este serviço.
+
+###### `ports`
+
+- **Descrição:** Mapeia as portas do contêiner para a máquina host.
+- **Significado:** Define quais portas serão expostas e como elas serão acessíveis.
+
+    - **`"8089:8089"`**
+        - **Descrição:** Mapeia a porta `8089` do host para a porta `8089` do contêiner.
+        - **Significado:** A aplicação rodando no contêiner escutará na porta `8089`, e essa porta será acessível externamente na porta `8089` da máquina host. Assim, acessar `localhost:8089` no host redireciona para a aplicação dentro do contêiner.
+
+###### `networks`
+
+- **Descrição:** Define as redes em que o serviço estará conectado.
+- **Significado:** Especifica a rede chamada `maianet` para o serviço `maiabank-api`.
+
+#### 3. `networks`
+
+- **Descrição:** Define as redes usadas pelos serviços.
+- **Significado:** Permite a comunicação entre contêineres através de redes definidas.
+
+##### `maianet`
+
+- **Descrição:** Nome da rede personalizada.
+- **Significado:** Uma rede chamada `maianet` será criada para uso pelos serviços.
+
+###### `driver: bridge`
+
+- **Descrição:** Especifica o driver de rede a ser usado.
+- **Significado:** Utiliza o driver `bridge`, que é o padrão para redes Docker, e cria uma rede de ponte permitindo a comunicação entre os contêineres conectados a ela. O `bridge` é o driver de rede padrão que isola contêineres em uma rede interna, com a capacidade de comunicar-se entre si.
+
+### Funcionamento Geral
+
+1. **Build e Deploy:**
+    - O Compose construirá a imagem Docker para `maiabank-api` usando o `Dockerfile` no contexto atual.
+    - Em seguida, ele cria e inicia um contêiner a partir dessa imagem.
+
+2. **Exposição de Portas:**
+    - A porta `8089` no contêiner `maiabank-api` é mapeada para a porta `8089` no host, permitindo o acesso à aplicação do contêiner através de `localhost:8089`.
+
+3. **Rede Personalizada:**
+    - O serviço `maiabank-api` será conectado à rede `maianet`, permitindo que ele se comunique com outros serviços que também estejam conectados a essa rede (embora no exemplo atual, não haja outros serviços especificados).
+
+### Resumo
+
+- O `docker-compose.yml` configura a construção e execução do serviço `maiabank-api`.
+- Ele usa um Dockerfile para construir a imagem e mapeia a porta `8089` do contêiner para o host.
+- Os contêineres se conectam através da rede personalizada `maianet`, permitindo comunicação isolada entre serviços na mesma rede.
+
+Esse setup é útil para desenvolvimento e testes, permitindo a construção de contêineres e configuração de redes de forma fácil e consistente com um único comando (`docker-compose up`).
+

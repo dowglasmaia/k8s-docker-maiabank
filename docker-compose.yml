@@ -1,0 +1,14 @@
+version: "3.3"
+services:
+  maiabank-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    networks:
+      - maianet
+
+networks:
+  maianet:
+    driver: bridge
