@@ -403,5 +403,5 @@ networks:
 - Ele usa um Dockerfile para construir a imagem e mapeia a porta `8089` do contêiner para o host.
 - Os contêineres se conectam através da rede personalizada `maianet`, permitindo comunicação isolada entre serviços na mesma rede.
 
-Esse setup é útil para desenvolvimento e testes, permitindo a construção de contêineres e configuração de redes de forma fácil e consistente com um único comando (`docker-compose up`).
+Esse setup é útil para desenvolvimento e testes, permitindo a construção de contêineres e configuração de redes de forma fácil e consistente com um único comando (`docker-compose up --build`).
 
