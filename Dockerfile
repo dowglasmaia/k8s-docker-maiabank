@@ -1,5 +1,5 @@
 # Fase 1: Build
-FROM maven:3.8.4-openjdk-17-slim AS build
+FROM maven:3.9.7-eclipse-temurin-17-alpine AS build
 
 WORKDIR /maiabank
 COPY pom.xml .
@@ -9,7 +9,7 @@ RUN mvn clean install
 
 
 # Fase 2: Runtime
-FROM amazoncorretto:17-alpine3.16
+FROM build
 LABEL MAINTAINER="Dowglas Maia"
 ENV SPRING_LOGGING_LEVEL=INFO
 ENV ACTUATOR_PORT=8089
